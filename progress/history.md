@@ -158,3 +158,17 @@
   - Justificación de Node 14/16.
   - Resumen de tests (36 API + 7 web).
   - Checklist de cumplimiento de la consigna (obligatorios + 7 opcionales tildados).
+
+## 2026-05-13 — T19 Push final a origin/main
+
+- Smoke previo al push:
+  - API: `npm test` 36/36 ✓, `npm run lint` (standard) exit 0 ✓.
+  - Web: `npm test` 7/7 ✓.
+- Commits acumulados pusheados a `origin/main`:
+  - `b7231e4` chore: scaffold monorepo
+  - `bb56e3c` feat(api): setup base Express + /health
+  - `94af820` feat(api): /files endpoints + CSV parsing + standard lint
+  - `e8e619c` feat: frontend + Dockerfiles + compose + README final
+- `git push` → fast-forward `b7231e4..e8e619c`.
+- Repo público: https://github.com/Felipeofor/Toolbox
+- Pendiente `MANUAL`: enviar URL al reclutador.

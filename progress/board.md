@@ -30,9 +30,8 @@
 
 
 
-- **T19 — `MANUAL` Entrega**
-  Push a repo público, enviar URL al reclutador.
-  **Done when:** repo accesible públicamente; mensaje enviado.
+- **T19 — Entrega** · `MANUAL`
+  Falta: enviar URL del repo al reclutador. Repo público y pusheado al día.
 
 ---
 
@@ -82,3 +81,6 @@
 
 - **T18 — README final** · `completed by: implementer` · `2026-05-13`
   README raíz con estructura, instrucciones local + Docker, scripts, endpoints con ejemplos curl, decisiones técnicas (Promise.allSettled, parser validations, token en config, observabilidad), cumplimiento checklist de consigna (obligatorios + 7 opcionales tildados).
+
+- **T19 — Push final a origin/main** · `completed by: implementer` · `2026-05-13`
+  4 commits pusheados a `origin/main`: scaffold (b7231e4) → API base (bb56e3c) → API /files + lint (94af820) → frontend + Docker + README (e8e619c). Tests verdes (API 36/36, Web 7/7) y StandardJS clean al momento del push. Queda `MANUAL` (no automatizable): enviar URL `https://github.com/Felipeofor/Toolbox` al reclutador.
