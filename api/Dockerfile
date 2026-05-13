@@ -1,6 +1,9 @@
 # syntax=docker/dockerfile:1
 FROM node:14-alpine AS deps
 WORKDIR /app
+# Node 14 ships with npm 6 which cannot read lockfileVersion 3.
+# Upgrade to npm 8 before installing.
+RUN npm install -g npm@8
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev
 

@@ -46,6 +46,9 @@ jobs:
           cache: npm
           cache-dependency-path: api/package-lock.json
 
+      - name: Upgrade npm (lockfileVersion 3 support)
+        run: npm install -g npm@8
+
       - name: Install
         run: npm ci
 
