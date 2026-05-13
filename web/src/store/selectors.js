@@ -11,6 +11,7 @@ export const selectSortDir = createSelector(selectFiles, (f) => f.sortDir)
 export const selectLoading = createSelector(selectFiles, (f) => f.loading)
 export const selectError = createSelector(selectFiles, (f) => f.error)
 export const selectStats = createSelector(selectFiles, (f) => f.stats)
+export const selectViewMode = createSelector(selectFiles, (f) => f.viewMode)
 
 export const selectRowCount = createSelector(selectData, (data) =>
   data.reduce((acc, entry) => acc + entry.lines.length, 0)

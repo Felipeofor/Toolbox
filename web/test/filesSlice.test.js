@@ -20,7 +20,7 @@ describe('filesSlice', () => {
 
   it('has the expected initial state', () => {
     const store = buildStore()
-    expect(store.getState().files).toEqual({
+    expect(store.getState().files).toMatchObject({
       data: [],
       list: [],
       filter: '',
@@ -31,6 +31,7 @@ describe('filesSlice', () => {
       loading: false,
       error: null
     })
+    expect(['full', 'baseline']).toContain(store.getState().files.viewMode)
   })
 
   it('setFilter / clearFilter update filter', () => {

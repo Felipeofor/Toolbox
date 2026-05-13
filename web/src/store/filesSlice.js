@@ -36,6 +36,22 @@ export const fetchFilesStats = createAsyncThunk(
   }
 )
 
+function loadViewMode () {
+  try {
+    if (typeof localStorage === 'undefined') return 'full'
+    const v = localStorage.getItem('toolbox.viewMode')
+    return v === 'baseline' ? 'baseline' : 'full'
+  } catch (_) {
+    return 'full'
+  }
+}
+
+function persistViewMode (mode) {
+  try {
+    if (typeof localStorage !== 'undefined') localStorage.setItem('toolbox.viewMode', mode)
+  } catch (_) { /* ignore */ }
+}
+
 const initialState = {
   data: [],
   list: [],
@@ -45,7 +61,8 @@ const initialState = {
   sortDir: 'asc',
   stats: null,
   loading: false,
-  error: null
+  error: null,
+  viewMode: loadViewMode()
 }
 
 const filesSlice = createSlice({
@@ -77,6 +94,11 @@ const filesSlice = createSlice({
         state.sortBy = column
         state.sortDir = 'asc'
       }
+    },
+    setViewMode (state, action) {
+      const mode = action.payload === 'baseline' ? 'baseline' : 'full'
+      state.viewMode = mode
+      persistViewMode(mode)
     }
   },
   extraReducers: (builder) => {
@@ -109,7 +131,8 @@ export const {
   setSearch,
   clearSearch,
   setSort,
-  toggleSort
+  toggleSort,
+  setViewMode
 } = filesSlice.actions
 
 export default filesSlice.reducer

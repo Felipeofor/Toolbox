@@ -49,7 +49,7 @@ export default function SearchBar () {
   }
 
   return (
-    <div className='mb-3'>
+    <div>
       <Row className='g-2 align-items-center'>
         <Col xs={12} md>
           <Form.Label htmlFor='search-input' className='visually-hidden'>
