@@ -1,0 +1,12 @@
+node_modules
+dist
+build
+coverage
+test
+*.log
+.DS_Store
+README.md
+.nvmrc
+jest.config.js
+jest.env.js
+jest.setup.js

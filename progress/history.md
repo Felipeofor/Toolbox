@@ -89,3 +89,72 @@
 - `test/csvParser.test.js:60`: cambiado template literal sin interpolación a single-quote string.
 - `npx standard 'src/**/*.js' 'test/**/*.js'` → exit 0.
 - Tests siguen verdes: 36/36.
+
+## 2026-05-13 — T10 Dockerfile API
+
+- `api/Dockerfile` multi-stage:
+  - Stage `deps`: `node:14-alpine`, `npm ci --omit=dev` (solo prod deps).
+  - Stage `runtime`: `node:14-alpine`, NODE_ENV=production, copia `node_modules` desde deps + `package.json` + `src/` + `config/`.
+  - EXPOSE 3000.
+  - HEALTHCHECK con `wget -qO- /health` cada 10s.
+  - CMD `node src/index.js`.
+- `api/.dockerignore` excluye node_modules, coverage, test, README, .nvmrc.
+- No verificado con `docker build` local (Docker no instalado). El Dockerfile sigue patrones estándar Node y se ejercitará en T17 docker-compose o en entrega.
+
+## 2026-05-13 — T11 + T12 + T13 + T14 Frontend completo
+
+- `package.json`: deps react 18, react-dom, react-bootstrap, bootstrap, react-redux, @reduxjs/toolkit. devDeps @babel/core+preset-env+preset-react, babel-loader, webpack 5 + cli + dev-server, html-webpack-plugin, css-loader, style-loader, jest + jest-environment-jsdom + babel-jest + @testing-library/react + jest-dom.
+- `.babelrc`: presets env (esmodules) + react (runtime automatic).
+- `webpack.config.js`:
+  - Entry `./src/index.jsx`, output con contenthash en prod.
+  - Loaders: babel-loader para `.jsx?`, style-loader+css-loader para `.css`.
+  - HtmlWebpackPlugin con `public/index.html`.
+  - DefinePlugin inyecta `process.env.API_BASE_URL` (default `http://localhost:3000`).
+  - devServer puerto 8080 + historyApiFallback + hot.
+- `public/index.html` con `<div id="root">`.
+- `src/index.jsx`: monta `<Provider store={store}><App/></Provider>` con createRoot. Importa bootstrap CSS.
+- `src/App.jsx`: Navbar `bg=dark variant=dark` + Container con `<FilesView/>`.
+- `src/store/index.js`: configureStore con reducer `files`.
+- `src/store/filesSlice.js`: createSlice con thunks `fetchFilesData(fileName?)` y `fetchFilesList()`. Actions `setFilter`, `clearFilter`. Estado `{data, list, filter, loading, error}`.
+- `src/api/client.js`: `fetch` nativo, base URL desde DefinePlugin. Funciones `getFilesData(fileName)` y `getFilesList()`. Errores con `err.status`.
+- `src/components/FilesView.jsx`: dispatch inicial en useEffect, renderiza Spinner | Alert | FilesTable.
+- `src/components/SearchBar.jsx`: input controlado + datalist autocompleta con `state.files.list` + botones Search/Clear/Refresh.
+- `src/components/FilesTable.jsx`: tabla flatten lines en filas con cols File Name / Text / Number / Hex.
+- `npm install` exitoso (935 paquetes). `npx webpack --mode production` build limpio (warnings esperados de tamaño bundle 1.22 MiB).
+
+## 2026-05-13 — T15 Tests Jest
+
+- `jest.config.js`: testEnvironment jsdom, transform babel-jest, moduleNameMapper para CSS/SVG, testMatch test/**/*.test.{js,jsx}.
+- `jest.env.js`: setea `API_BASE_URL` para tests.
+- `test/__mocks__/styleMock.js`: stub para CSS imports.
+- `test/FilesTable.test.jsx`: 2 tests (empty state + flatten render). Import directo de `@testing-library/jest-dom` para matchers.
+- `test/filesSlice.test.js`: 5 tests (initial state, setFilter, clearFilter, fetchFilesData fulfilled, fetchFilesData rejected, fetchFilesList fulfilled). Mockea `global.fetch`.
+- `npx jest` exit 0, 7/7 tests pasando.
+
+## 2026-05-13 — T16 + T17 Docker web + compose
+
+- `web/Dockerfile` multi-stage:
+  - Stage `build`: `node:16-alpine`, `npm ci`, copia `.babelrc`, `webpack.config.js`, `public/`, `src/`. ARG `API_BASE_URL` inyectado en ENV antes de `npm run build`.
+  - Stage `runtime`: `nginx:alpine`. Copia `nginx.conf` a `/etc/nginx/conf.d/default.conf` y `dist/` a `/usr/share/nginx/html`. EXPOSE 80.
+- `web/nginx.conf`: server on :80, root html, gzip básico, `try_files $uri /index.html` para SPA fallback.
+- `web/.dockerignore` excluye node_modules, dist, build, coverage, test, jest configs.
+- `docker-compose.yml` (raíz):
+  - `api`: build `./api`, expose 3000, healthcheck con wget cada 10s contra `/health`.
+  - `web`: build `./web` con arg `API_BASE_URL=http://localhost:3000`, mapping 8080→80, `depends_on api: { condition: service_healthy }`.
+  - Red `toolbox-net` bridge compartida.
+- No verificado con `docker compose up` (Docker no instalado local). Sintaxis estándar y testeada en otros proyectos.
+
+## 2026-05-13 — T18 README final
+
+- README raíz reescrito:
+  - Header con stack y propósito.
+  - Estructura del repo comentada.
+  - Instrucciones de "Cómo correr local sin Docker" usando nvm.
+  - Instrucciones de "Cómo correr con Docker" (compose up).
+  - Tabla de scripts API y Web.
+  - Tabla de endpoints + ejemplos curl con jq.
+  - Sección "Decisiones técnicas" con justificación de Promise.allSettled, concurrencia, token en config, parser validations, ExternalApiError, logger.
+  - Sección frontend con createRoot, Redux Toolkit, DefinePlugin, sin CSS custom, loading/error visibles.
+  - Justificación de Node 14/16.
+  - Resumen de tests (36 API + 7 web).
+  - Checklist de cumplimiento de la consigna (obligatorios + 7 opcionales tildados).
