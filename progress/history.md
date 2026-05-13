@@ -172,3 +172,84 @@
 - `git push` → fast-forward `b7231e4..e8e619c`.
 - Repo público: https://github.com/Felipeofor/Toolbox
 - Pendiente `MANUAL`: enviar URL al reclutador.
+
+## 2026-05-13 — T20 Upgrade a arquitectura Sr/Team Lead
+
+### Refactor API → Hexagonal
+
+- `src/domain/`:
+  - `errors.js`: `AppError`/`ValidationError`/`NotFoundError`/`UpstreamError` con `status` y `code` propios.
+  - `Hex.js`: VO con validación regex en constructor + `isValid()` estático + `toJSON()`.
+  - `FileName.js`: VO con whitelist `^[A-Za-z0-9._-]+$` y maxLength 255 (anti path traversal).
+  - `FileLine.js`: VO compuesto que rechaza tipos inválidos.
+  - `FileEntry.js`: aggregate con `isEmpty()` + `toJSON()`.
+- `src/application/files/`:
+  - `getAllFilesData.js`: factory `buildGetAllFilesData({ fileSource, parseCsv, logger, concurrency })`. Batches con `Promise.allSettled`. Omite entries vacíos.
+  - `getFileData.js`: factory que construye `FileName` (valida input), lista upstream y lanza `NotFoundError` si no existe.
+  - `listFiles.js`: passthrough.
+- `src/infrastructure/`:
+  - `echoServAdapter.js`: factory `buildEchoServAdapter({ config, logger })`. axios instance per-build (no cache global), mapping de errores a `UpstreamError` con status correcto (504 timeout, propaga HTTP cuando hay response).
+  - `csvParser.js`: factory `buildParser({ logger })`. Construye `FileLine` con `Hex` VO. Validaciones estrictas.
+- `src/interfaces/http/`:
+  - `server.js`: factory `buildHttpServer(container)`. Carga OpenAPI YAML al boot. Sirve `/health`, `/ready`, `/files/*`, `/metrics`, `/docs`, `/openapi.json`. Middleware order: helmet → cors → rate-limit → pino-http → metrics.
+  - `filesRouter.js`: factory que recibe `useCases`. Usa middleware `validateFileNameQuery`.
+  - `healthRouter.js`: `/health` always 200, `/ready` ejecuta `readinessProbe()` (chequea upstream).
+  - `middleware/security.js`: helmet + cors (origin de config) + rate limiter.
+  - `middleware/errorHandler.js`: mapping centralizado `AppError → HTTP response`.
+  - `middleware/validateFileName.js`: chequea param antes de tocar use case.
+  - `openapi/openapi.yaml`: spec completo con schemas (FileEntry, FileLine, FileList, HealthStatus, AppError) y responses.
+- `src/platform/`:
+  - `config.js`: `loadConfig()` retorna POJO desde `node-config`.
+  - `logger.js`: `buildLogger({level})` con pino.
+  - `metrics.js`: `buildMetrics()` con prom-client (default metrics + http_request_duration histogram + http_requests_total counter + middleware).
+  - `container.js`: composition root con overrides para tests.
+- `src/index.js`: 10 líneas — entrypoint que solo cablea container + server + listen.
+
+### Tests reorganizados (58 tests)
+
+- `test/domain/`: 17 tests sobre VOs (4 archivos).
+- `test/infrastructure/`: 16 tests (csvParser + echoServAdapter con nock).
+- `test/application/useCases.test.js`: 7 tests con fakes de FileSource y parseCsv.
+- `test/interfaces/http/server.test.js`: 18 tests integración (supertest) cubriendo health, ready, files/data, files/list, metrics, openapi.json, swagger, helmet, 404.
+- `test/setup.js` + `.mocharc.json`: bootstrapping de NODE_CONFIG_DIR/NODE_ENV.
+
+### Coverage gate (nyc)
+
+- Thresholds: branches 75, lines 85, functions 85, statements 85.
+- Actual: **96.45% / 81.96% / 96.55% / 96.60%** — gate pasa.
+
+### Web polish
+
+- `src/components/ErrorBoundary.jsx`: clase obligatoria (React lo requiere). `getDerivedStateFromError` + fallback Alert con role='alert'.
+- `src/store/selectors.js`: `createSelector` memoizado (selectData, selectList, selectFilter, selectLoading, selectError, selectRowCount, selectFlattenedRows con stable keys).
+- `src/components/FilesView.jsx`: `React.lazy(() => import('./FilesTable.jsx'))` + `Suspense` con spinner fallback.
+- `FilesTable.jsx`: consume `selectFlattenedRows` + `selectRowCount` directamente. Agrega header con count visible.
+- `SearchBar.jsx`: `Form.Label` con `htmlFor` + `visually-hidden`, `role='search'`, `aria-label`.
+- `FilesView.jsx`: section con heading semántica, `aria-live='polite'`.
+- `index.jsx`: wrapper `<ErrorBoundary>` alrededor del Provider.
+
+### Web tests (15)
+
+- `selectors.test.js`: 5 tests incluyendo verificación de memoization.
+- `ErrorBoundary.test.jsx`: 2 tests (children OK + fallback en error).
+- `FilesTable.test.jsx`: refactor para envolverse en Provider de Redux con preloadedState; agregado test de accessible name.
+- `filesSlice.test.js`: 5 tests existentes mantenidos.
+
+### Seguridad e infra
+
+- `helmet` + `cors` + `express-rate-limit` siempre activos.
+- `app.disable('x-powered-by')` + `trust proxy` para rate-limit detrás de proxy.
+- `/openapi.json` y `/docs` (Swagger UI) sirviendo el contrato.
+- `/metrics` para Prometheus scraping.
+
+### CI
+
+- `.github/workflows/ci.yml` con 3 jobs:
+  1. `api`: Node 14, npm ci, lint, test (con coverage gate), upload coverage artifact.
+  2. `web`: Node 16, npm ci, test --ci, build, upload dist artifact.
+  3. `docker`: depende de los anteriores; build de imágenes api y web.
+
+### Resultado pipeline pre-commit
+
+- API: `npm run lint` exit 0; `npm test` 58/58 + coverage 96/82/96/96.
+- Web: `npm test` 15/15; `npx webpack --mode production` build OK (1.22 MiB, lazy chunk emitido).

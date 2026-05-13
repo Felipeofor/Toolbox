@@ -2,47 +2,158 @@
 
 Solución al challenge técnico de TBX/Toolbox. Monorepo con:
 
-- **`api/`** — REST API en **Node 14 + Express** que consume `https://echo-serv.tbxnet.com`, parsea CSVs y los expone como JSON.
-- **`web/`** — Frontend en **React 18 + React Bootstrap (Webpack 5)** que consume el API local.
+- **`api/`** — REST API en **Node 14 + Express**, organizada en arquitectura **hexagonal (Ports & Adapters)** con DI explícita.
+- **`web/`** — Frontend en **React 18 + React Bootstrap (Webpack 5)** con **Redux Toolkit**, selectores memoizados, lazy loading y error boundary.
 - **`docker-compose.yml`** — orquesta ambos servicios.
+- **`.github/workflows/ci.yml`** — pipeline CI con lint, tests, coverage gate, build y validación de imágenes Docker.
+
+---
 
 ## Estructura
 
 ```
 .
-├── api/                          # Node 14 + Express + Mocha/Chai
+├── api/                                # Node 14 + Express (Hexagonal)
 │   ├── src/
-│   │   ├── app.js                # factory de la app Express
-│   │   ├── index.js              # entry point
-│   │   ├── logger.js             # pino con timestamp ISO
-│   │   ├── routes/files.js       # GET /files/data, GET /files/list
-│   │   └── services/
-│   │       ├── externalApi.js    # cliente axios con Bearer
-│   │       ├── csvParser.js      # parseo + validación estricta
-│   │       └── filesService.js   # orquestación con Promise.allSettled
-│   ├── test/                     # mocha + chai + nock + supertest
-│   ├── config/                   # default.json + test.json (sin env vars)
+│   │   ├── domain/                     # Value Objects + errores de dominio
+│   │   │   ├── Hex.js
+│   │   │   ├── FileName.js
+│   │   │   ├── FileLine.js
+│   │   │   ├── FileEntry.js
+│   │   │   └── errors.js
+│   │   ├── application/                # Use cases (factories con DI)
+│   │   │   └── files/
+│   │   │       ├── getAllFilesData.js
+│   │   │       ├── getFileData.js
+│   │   │       └── listFiles.js
+│   │   ├── infrastructure/             # Adapters (implementan puertos)
+│   │   │   ├── echoServAdapter.js      # FileSource port → echo-serv.tbxnet.com
+│   │   │   └── csvParser.js
+│   │   ├── interfaces/http/            # Adapter primario (HTTP)
+│   │   │   ├── server.js               # Factory de Express app
+│   │   │   ├── filesRouter.js
+│   │   │   ├── healthRouter.js         # /health (liveness) + /ready (readiness)
+│   │   │   ├── middleware/
+│   │   │   │   ├── security.js         # helmet + cors + rate-limit
+│   │   │   │   ├── validateFileName.js # validación al borde
+│   │   │   │   └── errorHandler.js     # mapping AppError → HTTP
+│   │   │   └── openapi/openapi.yaml    # contrato OpenAPI 3.0
+│   │   ├── platform/                   # Cross-cutting + composition root
+│   │   │   ├── config.js
+│   │   │   ├── logger.js               # pino estructurado
+│   │   │   ├── metrics.js              # Prometheus (prom-client)
+│   │   │   └── container.js            # composition root (DI)
+│   │   └── index.js                    # entrypoint
+│   ├── test/                           # mocha + chai + nock + supertest
+│   │   ├── domain/
+│   │   ├── application/
+│   │   ├── infrastructure/
+│   │   └── interfaces/http/
+│   ├── config/                         # default.json + test.json
 │   └── Dockerfile
-├── web/                          # Node 16 + React 18 + Bootstrap + Webpack 5
+├── web/                                # Node 16 + React 18 + Bootstrap + Webpack 5
 │   ├── src/
-│   │   ├── index.jsx
+│   │   ├── index.jsx                   # ErrorBoundary + Provider
 │   │   ├── App.jsx
-│   │   ├── api/client.js         # fetch wrapper
-│   │   ├── store/                # Redux Toolkit
-│   │   └── components/           # FilesView, SearchBar, FilesTable
-│   ├── test/                     # Jest + RTL + jest-dom
-│   ├── public/index.html
-│   ├── webpack.config.js
-│   ├── nginx.conf                # SPA fallback para serve estático
-│   └── Dockerfile
+│   │   ├── api/client.js               # fetch wrapper
+│   │   ├── store/
+│   │   │   ├── index.js
+│   │   │   ├── filesSlice.js           # Redux Toolkit slice + thunks
+│   │   │   └── selectors.js            # createSelector (memoizado)
+│   │   └── components/
+│   │       ├── ErrorBoundary.jsx
+│   │       ├── FilesView.jsx           # Suspense + lazy(FilesTable)
+│   │       ├── SearchBar.jsx
+│   │       └── FilesTable.jsx
+│   ├── test/                           # Jest + RTL + jest-dom
+│   └── Dockerfile + nginx.conf
+├── .github/workflows/ci.yml            # CI: lint + test + coverage + build + docker
 ├── docker-compose.yml
 ├── consigna.txt
 └── README.md
 ```
 
+---
+
+## Arquitectura — API (Hexagonal / Ports & Adapters)
+
+```
+                ┌───────────────────────────────────────────┐
+                │             interfaces/http               │
+                │  (Express, routes, validation, errors)    │
+                └────────────────┬──────────────────────────┘
+                                 │ usa
+                ┌────────────────▼──────────────────────────┐
+                │              application                  │
+                │   getAllFilesData · getFileData · listFiles
+                │   (use cases, factory-built, deps inyectadas)
+                └────────────────┬──────────────────────────┘
+                                 │ depende del puerto
+                ┌────────────────▼──────────────────────────┐
+                │                 domain                    │
+                │   Hex · FileName · FileLine · FileEntry   │
+                │   AppError · ValidationError · NotFound · │
+                │   UpstreamError                           │
+                └────────────────▲──────────────────────────┘
+                                 │ implementan
+                ┌────────────────┴──────────────────────────┐
+                │            infrastructure                 │
+                │   echoServAdapter (HTTP)                  │
+                │   csvParser                               │
+                └───────────────────────────────────────────┘
+```
+
+**Puerto `FileSource`** (interfaz implícita):
+- `listFiles(): Promise<string[]>`
+- `downloadFile(name: string): Promise<string>`
+
+**Composition root** (`platform/container.js`) cablea todo y permite **inyectar dependencias** en tests (cualquier dep es overridable).
+
+### Por qué hexagonal
+
+- **Testabilidad:** los use cases se prueban con sources falsos sin tocar HTTP ni axios.
+- **Reemplazo:** cambiar el upstream a otro origen (S3, FS) es un adapter nuevo, sin tocar dominio ni use cases.
+- **Reglas de dependencia:** dominio no importa nada de infra; infra implementa lo que el dominio define.
+
+---
+
+## Decisiones técnicas — API
+
+| Área | Decisión | Por qué |
+|---|---|---|
+| Concurrencia | `Promise.allSettled` en batches con tamaño configurable | Una descarga fallida no tumba la respuesta; refleja patrón de ingest OTT real (clientes NBC/Sky/UFC). |
+| Parser | Descarte silencioso con `logger.debug` por línea inválida | Consigna lo pide; matchea pipelines de catálogos sucios. |
+| Validación al borde | `validateFileNameQuery` middleware + VO `FileName` con regex `^[A-Za-z0-9._-]+$` | Bloquea path traversal antes de tocar use case. |
+| Errores tipados | `AppError`/`ValidationError`/`NotFoundError`/`UpstreamError` | Mapping centralizado en `errorHandler`; status/code consistentes. |
+| Seguridad | `helmet` + `cors` con origin configurable + `express-rate-limit` | Defensa básica OWASP, rate limit para evitar abuso. |
+| Config | Archivo `config/default.json` + `config/test.json`; cero env vars de SO | Lo exige la consigna. |
+| Observabilidad | `pino` JSON con timestamp ISO + métricas Prometheus (`/metrics`) | Operación OTT vive en logs/métricas. |
+| Healthchecks | `/health` (liveness — siempre 200) + `/ready` (verifica upstream) | Kubernetes-friendly, Docker compose usa `/health`. |
+| Contrato | OpenAPI 3.0 en `openapi/openapi.yaml`, Swagger UI en `/docs`, JSON en `/openapi.json` | Lead-level: contrato versionado. |
+| Inyección | Composition root `platform/container.js`; cada use case se construye via factory | Tests no necesitan monkey-patching. |
+| Tests | Mocha + Chai + nock + supertest; **gate de coverage** vía nyc (85/75/85/85) | Calidad medible. |
+| Lint | StandardJS | Suma del checklist + consistencia. |
+
+---
+
+## Decisiones técnicas — Web
+
+| Área | Decisión | Por qué |
+|---|---|---|
+| React | Funcional + `useEffect` exclusivamente | Consigna explícita. |
+| Estado | Redux Toolkit con slice `files` + thunks | Estado de carga/error/filtro compartido. |
+| Selectores | `createSelector` memoizado en `store/selectors.js` | Evita recomputos en re-renders. |
+| Code splitting | `React.lazy` + `Suspense` para `FilesTable` | Tabla solo carga cuando hace falta. |
+| Resiliencia UI | `ErrorBoundary` global como wrapper de la app | Error en render no rompe toda la página. |
+| Accesibilidad | Labels asociados (`htmlFor` + `visually-hidden`), `role`/`aria-label`/`aria-live`, table con `aria-label`, headings semánticas | A11y básica nivel WCAG AA. |
+| Build | Webpack 5 + babel-loader + DefinePlugin (`API_BASE_URL`) | Inyección en build time, cero env vars en runtime. |
+| Tests | Jest + RTL + jest-dom; 15 tests | Slice, selectors, ErrorBoundary, FilesTable. |
+
+---
+
 ## Cómo correr local (sin Docker)
 
-Requiere `nvm` o tener instalados Node 14 y Node 16. El `.nvmrc` de cada subproyecto define la versión esperada.
+Requiere `nvm` para tener Node 14 (API) y Node 16 (Web). Cada subproyecto tiene `.nvmrc`.
 
 ```bash
 # Terminal 1 — API en :3000
@@ -66,9 +177,11 @@ Abrir `http://localhost:8080`.
 docker compose up --build
 ```
 
-Levanta:
 - `toolbox-api` en `http://localhost:3000` (healthcheck `/health`).
 - `toolbox-web` en `http://localhost:8080` (espera a que la API esté healthy).
+- Documentación interactiva en `http://localhost:3000/docs`.
+
+---
 
 ## Scripts
 
@@ -77,8 +190,10 @@ Levanta:
 | Comando | Descripción |
 |---|---|
 | `npm start` | Levanta el servidor en `:3000` |
-| `npm test` | Corre Mocha + Chai (36 tests) |
-| `npm run lint` | StandardJS (sin args lintea todo) |
+| `npm test` | Mocha + Chai con **coverage gate** (nyc, 85/75/85/85) |
+| `npm run test:nocoverage` | Mocha solo, sin gate |
+| `npm run coverage` | Resumen de cobertura |
+| `npm run lint` | StandardJS |
 
 ### Web (`/web`)
 
@@ -86,16 +201,22 @@ Levanta:
 |---|---|
 | `npm start` | webpack-dev-server en `:8080` |
 | `npm run build` | Build de producción en `dist/` |
-| `npm test` | Jest + RTL (7 tests) |
+| `npm test` | Jest + RTL (15 tests) |
 
-## Endpoints (API propia)
+---
+
+## Endpoints
 
 | Método | Ruta | Descripción |
 |---|---|---|
-| GET | `/health` | Healthcheck `{status:"ok"}` |
-| GET | `/files/data` | Lista archivos del API externo, parsea y devuelve JSON agrupado |
-| GET | `/files/data?fileName=X` | Filtro por archivo (opcional) |
-| GET | `/files/list` | Passthrough del listado externo (opcional) |
+| GET | `/health` | Liveness probe |
+| GET | `/ready` | Readiness probe (chequea upstream) |
+| GET | `/files/data` | Listado parseado de todos los archivos |
+| GET | `/files/data?fileName=X` | Filtro por archivo |
+| GET | `/files/list` | Passthrough del listing upstream |
+| GET | `/metrics` | Métricas Prometheus |
+| GET | `/docs` | Swagger UI interactivo |
+| GET | `/openapi.json` | Spec OpenAPI 3.0 |
 
 ### Ejemplos
 
@@ -103,60 +224,60 @@ Levanta:
 curl -s http://localhost:3000/health
 # {"status":"ok"}
 
-curl -s "http://localhost:3000/files/data" | jq
-# [{ "file": "file1.csv", "lines": [{ "text": "...", "number": 1, "hex": "..." }] }, ...]
+curl -s http://localhost:3000/ready
+# {"status":"ready"}
+
+curl -s http://localhost:3000/files/data | jq
+# [{"file":"file1.csv","lines":[{"text":"...","number":1,"hex":"..."}]}, ...]
 
 curl -s "http://localhost:3000/files/data?fileName=file1.csv" | jq
-# [{ "file": "file1.csv", "lines": [...] }]
 
 curl -s http://localhost:3000/files/list | jq
 # {"files":["file1.csv","file2.csv",...]}
+
+curl -s http://localhost:3000/metrics | head
+# # HELP toolbox_api_http_requests_total Total HTTP requests
+# # TYPE toolbox_api_http_requests_total counter
+# ...
 ```
 
-Todas las respuestas son `Content-Type: application/json; charset=utf-8`.
+Todas las respuestas JSON con `Content-Type: application/json; charset=utf-8`.
 
-## Decisiones técnicas
+---
 
-### API
+## Tests y cobertura
 
-- **`Promise.allSettled` en batches** (no `Promise.all`). Si un archivo falla descarga, el resto sigue. La API responde 200 con los archivos que sí pudieron procesarse — refleja patrones de pipelines de ingest reales (catálogos de content providers).
-- **Concurrencia controlada** vía config (`externalApi.downloadConcurrency`, default 5). Para listados grandes evita saturar el upstream.
-- **Token en archivo de config**, no en código ni env vars (la consigna prohíbe depender de env vars del SO). `config/default.json` con sane defaults; `config/test.json` overridea para tests.
-- **Parser estricto** descarta silenciosamente líneas inválidas según consigna. Cada descarte loguea en `debug` con número de línea — observabilidad sin ruido. Validaciones:
-  - Exactamente 4 columnas.
-  - `text` no vacío.
-  - `number` parseable a `Number.isFinite` (acepta negativos).
-  - `hex` matchea `/^[a-f0-9]{32}$/i` (32 chars hex).
-  - `file` coincide con el archivo desde donde vino la línea.
-- **`ExternalApiError` tipado** con `status`. La capa de routes propaga ese status al cliente; default 502 para fallos upstream.
-- **Logger estructurado** (pino) en JSON con timestamp ISO. Operadores que monitorean OTT viven en logs.
+### API — 58 tests Mocha + Chai
 
-### Frontend
+- `domain/` — 17 tests sobre VOs (Hex, FileName, FileLine, FileEntry).
+- `infrastructure/` — 16 tests sobre adapter (nock para 200/404/500/timeout/shape) y parser (vacío, header, cols, hex/number/text/file, CRLF, mixto).
+- `application/` — 7 tests sobre use cases con doubles inyectados.
+- `interfaces/http/` — 18 tests integración con supertest cubriendo health, ready, files/data (con/sin filtro, 400/404/200), files/list, metrics, openapi.json, swagger UI, helmet, 404 JSON.
 
-- **React 18 con createRoot** y componentes funcionales 100% (consigna explícita: Hook Effects).
-- **Redux Toolkit** (slice `files`) con thunks. Estado: `data, list, filter, loading, error`. Permite a SearchBar acceder al listado completo sin prop drilling.
-- **DefinePlugin** inyecta `API_BASE_URL` en tiempo de build → en Docker se pasa por ARG. Cero env vars en runtime del cliente.
-- **react-bootstrap** para todos los componentes UI. Cero CSS custom — alineado a estética de dashboards de content management.
-- **Estados loading/error siempre visibles** (Spinner + Alert). En operación OTT es regla: el operador necesita saber qué está pasando.
+**Coverage (nyc):** `Statements 96.45% · Branches 81.96% · Functions 96.55% · Lines 96.60%`. Gate configurado en 85/75/85/85.
 
-### Por qué Node 14 / Node 16
+### Web — 15 tests Jest + RTL
 
-Lo pide la consigna explícitamente. Se declara en `engines` y `.nvmrc` de cada subproyecto. Las imágenes Docker usan exactamente esas versiones (`node:14-alpine`, `node:16-alpine`).
+- `filesSlice` — initial, setFilter/clearFilter, thunks fulfilled/rejected.
+- `selectors` — memoization, flatten, rowCount.
+- `ErrorBoundary` — renderiza children OK; cae a fallback en error.
+- `FilesTable` — empty state, flatten render, accessible name.
 
-## Tests
+---
 
-- **API**: `cd api && npm test` → 36 tests Mocha + Chai cubren:
-  - Cliente externo: 200, 404, 500, timeout, shape inválido.
-  - Parser CSV: válidos, cols faltantes/extras, hex/number/text/file inválidos, CRLF, mixto.
-  - Rutas: happy path, fallo parcial, listing fallido, filtro válido/inexistente/empty, /files/list passthrough, /health.
+## CI / CD
 
-- **Web**: `cd web && npm test` → 7 tests Jest + RTL cubren:
-  - FilesTable empty + flatten.
-  - filesSlice initial, setFilter, clearFilter, fetchFilesData fulfilled/rejected, fetchFilesList fulfilled.
+`.github/workflows/ci.yml` corre en push a `main` y en PRs:
+
+1. **API job** (Node 14): `npm ci` → `npm run lint` → `npm test` (con coverage gate) → upload coverage artifact.
+2. **Web job** (Node 16): `npm ci` → `npm test --ci` → `npm run build` → upload dist artifact.
+3. **Docker job** (después de los dos anteriores): `docker build` de api y web.
+
+---
 
 ## Cumplimiento de la consigna
 
-### API
+### Obligatorios API
 
 - [x] Node 14 + Express
 - [x] JS ES6+ sin Babel/TS
@@ -164,13 +285,12 @@ Lo pide la consigna explícitamente. Se declara en `engines` y `.nvmrc` de cada 
 - [x] Mocha + Chai, `npm test` corre
 - [x] `npm start` arranca
 
-### Frontend
+### Obligatorios Frontend
 
-- [x] React funcional + Hook Effects (useEffect, sin clases)
+- [x] React funcional + Hook Effects (sin clases excepto ErrorBoundary, donde es obligatorio)
 - [x] React Bootstrap
 - [x] Webpack 5
-- [x] Node 16, JS ES6+
-- [x] Sin TypeScript
+- [x] Node 16, JS ES6+, sin TypeScript
 
 ### Opcionales
 
@@ -178,6 +298,19 @@ Lo pide la consigna explícitamente. Se declara en `engines` y `.nvmrc` de cada 
 - [x] `?fileName=` en `/files/data`
 - [x] StandardJS lint
 - [x] Redux Toolkit
-- [x] Jest
+- [x] Tests Jest
 - [x] Filtro UI por fileName
 - [x] Docker + docker-compose
+
+### Más allá de la consigna (nivel Senior / Team Lead)
+
+- [x] Arquitectura hexagonal con DI explícita
+- [x] Value Objects de dominio (Hex, FileName, FileLine, FileEntry)
+- [x] Errores tipados (`AppError` + jerarquía)
+- [x] OpenAPI 3.0 spec + Swagger UI
+- [x] `helmet` + `express-rate-limit` + validación al borde
+- [x] `/health` (liveness) + `/ready` (readiness)
+- [x] Métricas Prometheus (`/metrics`)
+- [x] Coverage gate (nyc, 85/75/85/85)
+- [x] ErrorBoundary, lazy loading, selectores memoizados, a11y
+- [x] GitHub Actions CI con lint/test/coverage/build/docker

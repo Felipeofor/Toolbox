@@ -3,11 +3,12 @@ import { Form, Button, InputGroup, Row, Col } from 'react-bootstrap'
 import { useDispatch, useSelector } from 'react-redux'
 
 import { fetchFilesData, fetchFilesList, setFilter, clearFilter } from '../store/filesSlice.js'
+import { selectList, selectFilter } from '../store/selectors.js'
 
 export default function SearchBar () {
   const dispatch = useDispatch()
-  const list = useSelector((s) => s.files.list)
-  const filter = useSelector((s) => s.files.filter)
+  const list = useSelector(selectList)
+  const filter = useSelector(selectFilter)
   const [value, setValue] = useState(filter)
 
   function onSubmit (e) {
@@ -28,16 +29,21 @@ export default function SearchBar () {
   }
 
   return (
-    <Form onSubmit={onSubmit} className='mb-3'>
+    <Form onSubmit={onSubmit} className='mb-3' role='search' aria-label='Filter files'>
       <Row className='g-2 align-items-center'>
         <Col xs={12} md={6}>
+          <Form.Label htmlFor='fileName-input' className='visually-hidden'>
+            File name
+          </Form.Label>
           <InputGroup>
             <Form.Control
+              id='fileName-input'
               type='text'
               list='files-list'
               placeholder='Filter by fileName (e.g. file1.csv)'
               value={value}
               onChange={(e) => setValue(e.target.value)}
+              aria-label='Filter by fileName'
             />
             <Button type='submit' variant='primary'>Search</Button>
             <Button type='button' variant='outline-secondary' onClick={onClear}>Clear</Button>

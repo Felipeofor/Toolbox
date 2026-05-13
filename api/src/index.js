@@ -1,12 +1,12 @@
 'use strict'
 
-const config = require('config')
-const buildApp = require('./app')
-const logger = require('./logger')
+const { buildContainer } = require('./platform/container')
+const { buildHttpServer } = require('./interfaces/http/server')
 
-const port = config.get('server.port')
-const app = buildApp()
+const container = buildContainer()
+const app = buildHttpServer(container)
 
+const port = container.config.server.port
 app.listen(port, () => {
-  logger.info({ port }, 'toolbox-api listening')
+  container.logger.info({ port }, 'toolbox-api listening')
 })

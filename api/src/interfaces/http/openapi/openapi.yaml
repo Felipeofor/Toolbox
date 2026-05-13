@@ -1,0 +1,162 @@
+openapi: 3.0.3
+info:
+  title: Toolbox API
+  version: 1.0.0
+  description: |
+    REST API that consumes an upstream secret file source, parses the
+    delivered CSVs and exposes a normalized JSON view per file.
+servers:
+  - url: http://localhost:3000
+    description: Local development
+paths:
+  /health:
+    get:
+      summary: Liveness probe
+      responses:
+        '200':
+          description: Service is alive
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthStatus'
+  /ready:
+    get:
+      summary: Readiness probe (verifies upstream is reachable)
+      responses:
+        '200':
+          description: Service is ready
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthStatus'
+        '503':
+          description: Service not ready
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthStatus'
+  /files/data:
+    get:
+      summary: Fetch and reformat all files (or one if filtered)
+      parameters:
+        - in: query
+          name: fileName
+          required: false
+          description: Filter response to a single file
+          schema:
+            type: string
+            pattern: '^[A-Za-z0-9._-]+$'
+            maxLength: 255
+      responses:
+        '200':
+          description: Parsed file entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FileEntry'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '502':
+          $ref: '#/components/responses/Upstream'
+  /files/list:
+    get:
+      summary: Passthrough of the upstream file listing
+      responses:
+        '200':
+          description: List of files
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FileList'
+        '502':
+          $ref: '#/components/responses/Upstream'
+  /metrics:
+    get:
+      summary: Prometheus metrics
+      responses:
+        '200':
+          description: Metrics in Prometheus exposition format
+          content:
+            text/plain:
+              schema:
+                type: string
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [ok, ready, not_ready]
+        error:
+          type: string
+    FileLine:
+      type: object
+      required: [text, number, hex]
+      properties:
+        text:
+          type: string
+          minLength: 1
+        number:
+          type: number
+        hex:
+          type: string
+          pattern: '^[a-f0-9]{32}$'
+    FileEntry:
+      type: object
+      required: [file, lines]
+      properties:
+        file:
+          type: string
+        lines:
+          type: array
+          items:
+            $ref: '#/components/schemas/FileLine'
+    FileList:
+      type: object
+      required: [files]
+      properties:
+        files:
+          type: array
+          items:
+            type: string
+    AppError:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+  responses:
+    ValidationError:
+      description: Validation failed
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/AppError'
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/AppError'
+    RateLimited:
+      description: Too many requests
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/AppError'
+    Upstream:
+      description: Upstream failed
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/AppError'

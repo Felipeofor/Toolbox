@@ -1,14 +1,17 @@
-import React, { useEffect } from 'react'
+import React, { useEffect, Suspense, lazy } from 'react'
 import { Alert, Spinner } from 'react-bootstrap'
 import { useDispatch, useSelector } from 'react-redux'
 
-import SearchBar from './SearchBar.jsx'
-import FilesTable from './FilesTable.jsx'
 import { fetchFilesData, fetchFilesList } from '../store/filesSlice.js'
+import { selectLoading, selectError } from '../store/selectors.js'
+import SearchBar from './SearchBar.jsx'
+
+const FilesTable = lazy(() => import('./FilesTable.jsx'))
 
 export default function FilesView () {
   const dispatch = useDispatch()
-  const { data, loading, error } = useSelector((s) => s.files)
+  const loading = useSelector(selectLoading)
+  const error = useSelector(selectError)
 
   useEffect(() => {
     dispatch(fetchFilesData())
@@ -16,23 +19,28 @@ export default function FilesView () {
   }, [dispatch])
 
   return (
-    <div>
+    <section aria-labelledby='files-heading'>
+      <h1 id='files-heading' className='visually-hidden'>Toolbox files</h1>
       <SearchBar />
 
       {loading && (
-        <div className='d-flex align-items-center gap-2 mb-3' role='status'>
-          <Spinner animation='border' size='sm' />
+        <div className='d-flex align-items-center gap-2 mb-3' role='status' aria-live='polite'>
+          <Spinner animation='border' size='sm' aria-hidden='true' />
           <span>Loading…</span>
         </div>
       )}
 
       {error && (
-        <Alert variant='danger'>
+        <Alert variant='danger' role='alert'>
           <strong>Error {error.status || ''}:</strong> {error.message}
         </Alert>
       )}
 
-      {!loading && !error && <FilesTable data={data} />}
-    </div>
+      {!loading && !error && (
+        <Suspense fallback={<Spinner animation='border' size='sm' aria-label='Loading table' />}>
+          <FilesTable />
+        </Suspense>
+      )}
+    </section>
   )
 }

@@ -1,21 +1,24 @@
 {
   "name": "toolbox-api",
   "version": "1.0.0",
-  "description": "API REST que consume echo-serv.tbxnet.com y expone datos reformateados",
+  "description": "Hexagonal Node 14 API that ingests upstream CSV feeds and exposes them as JSON",
   "main": "src/index.js",
   "engines": {
     "node": "14.x"
   },
   "scripts": {
     "start": "node src/index.js",
-    "test": "mocha --recursive 'test/**/*.test.js'",
+    "test": "nyc mocha --recursive 'test/**/*.test.js'",
+    "test:nocoverage": "mocha --recursive 'test/**/*.test.js'",
+    "coverage": "nyc report --reporter=text-summary",
     "lint": "standard"
   },
   "keywords": [
     "toolbox",
     "challenge",
     "express",
-    "csv"
+    "csv",
+    "hexagonal"
   ],
   "author": "Felipe Ramos",
   "license": "ISC",
@@ -24,13 +27,19 @@
     "config": "^3.3.9",
     "cors": "^2.8.5",
     "express": "^4.18.2",
+    "express-rate-limit": "^6.7.0",
+    "helmet": "^7.0.0",
+    "js-yaml": "^4.1.0",
     "pino": "^8.14.1",
-    "pino-http": "^8.3.3"
+    "pino-http": "^8.3.3",
+    "prom-client": "^14.2.0",
+    "swagger-ui-express": "^4.6.3"
   },
   "devDependencies": {
     "chai": "^4.3.7",
     "mocha": "^10.2.0",
     "nock": "^13.3.1",
+    "nyc": "^15.1.0",
     "standard": "^17.1.0",
     "supertest": "^6.3.3"
   },
@@ -38,5 +47,25 @@
     "env": [
       "mocha"
     ]
+  },
+  "nyc": {
+    "all": true,
+    "include": [
+      "src/**/*.js"
+    ],
+    "exclude": [
+      "src/index.js",
+      "src/platform/metrics.js"
+    ],
+    "reporter": [
+      "text",
+      "text-summary",
+      "html"
+    ],
+    "check-coverage": true,
+    "branches": 75,
+    "lines": 85,
+    "functions": 85,
+    "statements": 85
   }
 }

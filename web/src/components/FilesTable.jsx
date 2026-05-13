@@ -1,41 +1,42 @@
 import React from 'react'
 import { Table } from 'react-bootstrap'
+import { useSelector } from 'react-redux'
 
-export default function FilesTable ({ data }) {
-  const rows = data.flatMap((group) =>
-    group.lines.map((l, idx) => ({
-      key: `${group.file}-${idx}`,
-      file: group.file,
-      text: l.text,
-      number: l.number,
-      hex: l.hex
-    }))
-  )
+import { selectFlattenedRows, selectRowCount } from '../store/selectors.js'
+
+export default function FilesTable () {
+  const rows = useSelector(selectFlattenedRows)
+  const total = useSelector(selectRowCount)
 
   if (rows.length === 0) {
-    return <div className='text-muted'>No data to display.</div>
+    return <div className='text-muted' role='status' aria-live='polite'>No data to display.</div>
   }
 
   return (
-    <Table striped bordered hover responsive size='sm'>
-      <thead>
-        <tr>
-          <th>File Name</th>
-          <th>Text</th>
-          <th>Number</th>
-          <th>Hex</th>
-        </tr>
-      </thead>
-      <tbody>
-        {rows.map((r) => (
-          <tr key={r.key}>
-            <td>{r.file}</td>
-            <td>{r.text}</td>
-            <td>{r.number}</td>
-            <td><code>{r.hex}</code></td>
+    <>
+      <p className='text-muted small mb-2' aria-live='polite'>
+        Showing <strong>{total}</strong> {total === 1 ? 'row' : 'rows'}
+      </p>
+      <Table striped bordered hover responsive size='sm' aria-label='Files contents'>
+        <thead>
+          <tr>
+            <th scope='col'>File Name</th>
+            <th scope='col'>Text</th>
+            <th scope='col'>Number</th>
+            <th scope='col'>Hex</th>
           </tr>
-        ))}
-      </tbody>
-    </Table>
+        </thead>
+        <tbody>
+          {rows.map((r) => (
+            <tr key={r.key}>
+              <td>{r.file}</td>
+              <td>{r.text}</td>
+              <td>{r.number}</td>
+              <td><code>{r.hex}</code></td>
+            </tr>
+          ))}
+        </tbody>
+      </Table>
+    </>
   )
 }

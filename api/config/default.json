@@ -1,7 +1,11 @@
 {
   "server": {
     "port": 3000,
-    "corsOrigin": "*"
+    "corsOrigin": "*",
+    "rateLimit": {
+      "windowMs": 60000,
+      "max": 120
+    }
   },
   "externalApi": {
     "baseUrl": "https://echo-serv.tbxnet.com",
