@@ -39,6 +39,11 @@ module.exports = (env, argv) => {
       hot: true,
       static: path.resolve(__dirname, 'public')
     },
-    devtool: isProd ? 'source-map' : 'eval-cheap-module-source-map'
+    devtool: isProd ? 'source-map' : 'eval-cheap-module-source-map',
+    performance: {
+      hints: isProd ? 'warning' : false,
+      maxAssetSize: 1536 * 1024,
+      maxEntrypointSize: 1536 * 1024
+    }
   }
 }
