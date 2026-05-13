@@ -1,9 +1,10 @@
 import React, { useEffect, Suspense, lazy } from 'react'
-import { Alert, Button } from 'react-bootstrap'
+import { Alert, Button, Card } from 'react-bootstrap'
 import { useDispatch, useSelector } from 'react-redux'
 
-import { fetchFilesData } from '../store/filesSlice.js'
+import { fetchFilesData, fetchFilesList } from '../store/filesSlice.js'
 import { selectLoading, selectError } from '../store/selectors.js'
+import SearchBar from './SearchBar.jsx'
 import SkeletonTable from './SkeletonTable.jsx'
 
 const FilesTable = lazy(() => import('./FilesTable.jsx'))
@@ -15,6 +16,7 @@ export default function FilesPanel () {
 
   useEffect(() => {
     dispatch(fetchFilesData())
+    dispatch(fetchFilesList())
   }, [dispatch])
 
   function retry () {
@@ -34,13 +36,19 @@ export default function FilesPanel () {
         </Alert>
       )}
 
-      {loading && <SkeletonTable />}
-
-      {!loading && !error && (
-        <Suspense fallback={<SkeletonTable rows={6} />}>
-          <FilesTable />
-        </Suspense>
-      )}
+      <Card>
+        <Card.Header className='bg-white'>
+          <SearchBar />
+        </Card.Header>
+        <Card.Body>
+          {loading && <SkeletonTable />}
+          {!loading && !error && (
+            <Suspense fallback={<SkeletonTable rows={6} />}>
+              <FilesTable />
+            </Suspense>
+          )}
+        </Card.Body>
+      </Card>
     </section>
   )
 }

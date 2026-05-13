@@ -1,20 +1,19 @@
 import React, { useEffect, Suspense, lazy } from 'react'
-import { Alert, Button, Card } from 'react-bootstrap'
+import { Alert, Button } from 'react-bootstrap'
 import { useDispatch, useSelector } from 'react-redux'
 
-import { fetchFilesData, fetchFilesList, fetchFilesStats } from '../store/filesSlice.js'
-import { selectLoading, selectError } from '../store/selectors.js'
-import SearchBar from './SearchBar.jsx'
+import { fetchFilesData, fetchFilesList, fetchFilesStats, setActiveTab } from '../store/filesSlice.js'
+import { selectLoading, selectError, selectStats } from '../store/selectors.js'
 import KpiCards from './KpiCards.jsx'
 import SkeletonTable from './SkeletonTable.jsx'
 
-const FilesTable = lazy(() => import('./FilesTable.jsx'))
 const DataQuality = lazy(() => import('./DataQuality.jsx'))
 
 export default function DashboardPanel () {
   const dispatch = useDispatch()
   const loading = useSelector(selectLoading)
   const error = useSelector(selectError)
+  const stats = useSelector(selectStats)
 
   useEffect(() => {
     dispatch(fetchFilesData())
@@ -27,15 +26,15 @@ export default function DashboardPanel () {
     dispatch(fetchFilesStats())
   }
 
+  function goToFiles () {
+    dispatch(setActiveTab('files'))
+  }
+
   return (
     <section aria-labelledby='dashboard-heading'>
       <h2 id='dashboard-heading' className='visually-hidden'>Pipeline dashboard</h2>
 
       <KpiCards />
-
-      <Suspense fallback={<SkeletonTable rows={3} />}>
-        <DataQuality />
-      </Suspense>
 
       {error && (
         <Alert variant='danger' role='alert' className='d-flex align-items-center justify-content-between'>
@@ -46,19 +45,17 @@ export default function DashboardPanel () {
         </Alert>
       )}
 
-      <Card>
-        <Card.Header className='bg-white'>
-          <SearchBar />
-        </Card.Header>
-        <Card.Body>
-          {loading && <SkeletonTable />}
-          {!loading && !error && (
-            <Suspense fallback={<SkeletonTable rows={6} />}>
-              <FilesTable />
-            </Suspense>
-          )}
-        </Card.Body>
-      </Card>
+      {loading && !stats && <SkeletonTable rows={4} />}
+
+      <Suspense fallback={<SkeletonTable rows={4} />}>
+        <DataQuality />
+      </Suspense>
+
+      <div className='d-flex justify-content-end mt-3'>
+        <Button variant='outline-primary' onClick={goToFiles}>
+          View raw data →
+        </Button>
+      </div>
     </section>
   )
 }
