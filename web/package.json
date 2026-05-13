@@ -1,0 +1,24 @@
+{
+  "name": "toolbox-web",
+  "version": "1.0.0",
+  "description": "Frontend React + Bootstrap que consume la API local de Toolbox",
+  "private": true,
+  "engines": {
+    "node": "16.x"
+  },
+  "scripts": {
+    "start": "webpack serve --mode development",
+    "build": "webpack --mode production",
+    "test": "jest"
+  },
+  "keywords": [
+    "toolbox",
+    "challenge",
+    "react",
+    "bootstrap"
+  ],
+  "author": "Felipe Ramos",
+  "license": "ISC",
+  "dependencies": {},
+  "devDependencies": {}
+}

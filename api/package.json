@@ -1,0 +1,24 @@
+{
+  "name": "toolbox-api",
+  "version": "1.0.0",
+  "description": "API REST que consume echo-serv.tbxnet.com y expone datos reformateados",
+  "main": "src/index.js",
+  "engines": {
+    "node": "14.x"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "test": "mocha --recursive 'test/**/*.test.js'",
+    "lint": "standard"
+  },
+  "keywords": [
+    "toolbox",
+    "challenge",
+    "express",
+    "csv"
+  ],
+  "author": "Felipe Ramos",
+  "license": "ISC",
+  "dependencies": {},
+  "devDependencies": {}
+}
