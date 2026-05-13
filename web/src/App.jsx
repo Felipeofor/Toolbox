@@ -1,17 +1,17 @@
 import React from 'react'
-import { Container, Navbar } from 'react-bootstrap'
+import { Container } from 'react-bootstrap'
 
 import FilesView from './components/FilesView.jsx'
 
 export default function App () {
   return (
     <>
-      <Navbar bg='dark' variant='dark' className='mb-4'>
+      <header className='app-header'>
         <Container>
-          <Navbar.Brand>Toolbox · Files Viewer</Navbar.Brand>
+          <h1 className='m-0'>React Test App</h1>
         </Container>
-      </Navbar>
-      <Container>
+      </header>
+      <Container className='py-4'>
         <FilesView />
       </Container>
     </>

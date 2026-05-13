@@ -302,6 +302,14 @@ Todas las respuestas JSON con `Content-Type: application/json; charset=utf-8`.
 - [x] Filtro UI por fileName
 - [x] Docker + docker-compose
 
+### Referencias visuales
+
+- `wireframe.png` — wireframe original del frontend (banner "React Test App" + tabla striped).
+- `sequence.png` — diagrama de secuencia: cliente → API → API externo (lista + loop downloads + formateo).
+- `consigna.pdf` — consigna original en PDF.
+
+El header rojo y el título "React Test App" matchean el wireframe. SearchBar/filter es agregado opcional (entra como suma).
+
 ### Más allá de la consigna (nivel Senior / Team Lead)
 
 - [x] Arquitectura hexagonal con DI explícita
