@@ -15,29 +15,9 @@
 ### API (Node 14 + Express)
 
 
-- **T04 — Cliente API externa**
-  `src/services/externalApi.js`: funciones `listFiles()` y `downloadFile(name)` usando axios con baseURL y header `Authorization: Bearer <token>` desde config. Timeout 10s. Manejo de errores: lanza error tipado con código HTTP.
-  **Done when:** tests con `nock` cubren 200, 404, 500, timeout para ambas funciones; todos pasan.
 
-- **T05 — Parser CSV resiliente**
-  `src/services/csvParser.js`: función `parseCsv(content, expectedFileName)` que retorna `[{text,number,hex}]`. Descarta líneas inválidas (cols faltantes, `hex` no `/^[a-f0-9]{32}$/i`, `number` no finito, `file` no coincide con `expectedFileName`). Maneja archivo vacío y solo-header. Logger debug por línea descartada.
-  **Done when:** tests cubren: válida; cols faltantes; hex malo; number no numérico; file mismatch; vacío; solo header; mixto; todos pasan.
 
-- **T06 — Endpoint GET /files/data**
-  `src/routes/files.js` registra ruta. Controller orquesta `listFiles()` → `Promise.allSettled(downloadFile)` → `parseCsv` por cada uno. Filtra archivos con descarga fallida (logger warn). Devuelve `[{file, lines:[{text,number,hex}]}]` con `Content-Type: application/json; charset=utf-8`. Status 200 incluso si todos los archivos fallan (devuelve `[]`).
-  **Done when:** test de integración con nock cubre: todos OK; un archivo falla descarga; archivo con líneas mixtas válidas/inválidas; lista externa falla (500 con mensaje).
 
-- **T07 — Endpoint GET /files/list (opcional)**
-  Passthrough del listado externo. Devuelve el JSON tal cual.
-  **Done when:** test integración devuelve mismo shape que API externa; pasa.
-
-- **T08 — Filtro `?fileName=` en /files/data (opcional)**
-  Si query param presente, validar que existe en `listFiles()`. Descargar solo ese archivo. 404 si no está en el listado. 400 si query param vacío/inválido.
-  **Done when:** tests cubren: param válido devuelve solo ese archivo; param inexistente devuelve 404; sin param funciona como antes.
-
-- **T09 — StandardJS (opcional)**
-  Agregar `standard` devDep + script `npm run lint`. Corregir todo el código hasta pasar.
-  **Done when:** `npm run lint` exit 0.
 
 - **T10 — Dockerfile API**
   Multi-stage `node:14-alpine`. Stage `deps` instala con `npm ci --omit=dev`, stage final copia node_modules + src + config. EXPOSE 3000. CMD `node src/index.js`.
@@ -101,3 +81,15 @@
 
 - **T03 — Setup base API** · `completed by: implementer` · `2026-05-13`
   Deps: express, cors, pino, pino-http, config, axios. DevDeps: mocha, chai, nock, supertest, standard. `config/default.json` y `config/test.json` con server/externalApi/log. `src/logger.js` (pino), `src/app.js` (cors + pino-http + /health + router files + 404/500 handlers), `src/index.js` entry. Smoke test: `/health` → 200 `{"status":"ok"}` con `application/json; charset=utf-8`.
+
+- **T04 — Cliente API externa** · `completed by: implementer` · `2026-05-13`
+  `src/services/externalApi.js`: factory axios cached (`getClient`/`_resetClient`), header `Authorization: Bearer <token>`, timeout configurable. `listFiles()` valida `Array.isArray(res.data.files)`. `downloadFile(name)` con `encodeURIComponent`, `responseType:'text'`. Errores envueltos en `ExternalApiError` con `status` (502 default, 504 en timeout, propagación del HTTP cuando hay response). 10 tests pasando.
+
+- **T05 — Parser CSV resiliente** · `completed by: implementer` · `2026-05-13`
+  `src/services/csvParser.js`: `parseCsv(content, expectedFileName)` con header opcional, soporte CRLF, regex hex `/^[a-f0-9]{32}$/i`, validación `Number.isFinite`, match estricto de `file` cuando se pasa `expectedFileName`. Líneas inválidas se logean en `debug` y descartan. 15 tests cubriendo: vacío, header solo, válidas, cols faltantes/extras, number/hex/empty text/file mismatch, CRLF, mixto.
+
+- **T06 + T07 + T08 — Rutas /files** · `completed by: implementer` · `2026-05-13`
+  `src/services/filesService.js`: orquesta listing + descargas en batches (concurrency configurable, default 5) con `Promise.allSettled`. `processFile` retorna null en fallo (no tumba batch). Files con 0 líneas válidas se omiten del output. `getFileData(name)` valida que el nombre exista en listing externo (404 si no). `src/routes/files.js`: GET `/files/data` (con opcional `?fileName=`), GET `/files/list` (passthrough). Errores propagan status; default 502. Content-Type `application/json; charset=utf-8` en todas las respuestas. 11 tests integración pasando (total 36/36).
+
+- **T09 — StandardJS** · `completed by: implementer` · `2026-05-13`
+  Configurado `"standard": {"env":["mocha"]}` en package.json para reconocer globals de tests. Fix de 1 template literal sin expresiones. `npx standard` exit 0 sobre `src/` y `test/`. Tests siguen 36/36.
