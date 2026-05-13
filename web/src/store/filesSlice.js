@@ -36,19 +36,19 @@ export const fetchFilesStats = createAsyncThunk(
   }
 )
 
-function loadViewMode () {
+function loadActiveTab () {
   try {
-    if (typeof localStorage === 'undefined') return 'full'
-    const v = localStorage.getItem('toolbox.viewMode')
-    return v === 'baseline' ? 'baseline' : 'full'
+    if (typeof localStorage === 'undefined') return 'dashboard'
+    const v = localStorage.getItem('toolbox.activeTab')
+    return v === 'files' ? 'files' : 'dashboard'
   } catch (_) {
-    return 'full'
+    return 'dashboard'
   }
 }
 
-function persistViewMode (mode) {
+function persistActiveTab (tab) {
   try {
-    if (typeof localStorage !== 'undefined') localStorage.setItem('toolbox.viewMode', mode)
+    if (typeof localStorage !== 'undefined') localStorage.setItem('toolbox.activeTab', tab)
   } catch (_) { /* ignore */ }
 }
 
@@ -62,7 +62,7 @@ const initialState = {
   stats: null,
   loading: false,
   error: null,
-  viewMode: loadViewMode()
+  activeTab: loadActiveTab()
 }
 
 const filesSlice = createSlice({
@@ -95,10 +95,10 @@ const filesSlice = createSlice({
         state.sortDir = 'asc'
       }
     },
-    setViewMode (state, action) {
-      const mode = action.payload === 'baseline' ? 'baseline' : 'full'
-      state.viewMode = mode
-      persistViewMode(mode)
+    setActiveTab (state, action) {
+      const tab = action.payload === 'files' ? 'files' : 'dashboard'
+      state.activeTab = tab
+      persistActiveTab(tab)
     }
   },
   extraReducers: (builder) => {
@@ -132,7 +132,7 @@ export const {
   clearSearch,
   setSort,
   toggleSort,
-  setViewMode
+  setActiveTab
 } = filesSlice.actions
 
 export default filesSlice.reducer

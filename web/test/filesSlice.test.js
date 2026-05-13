@@ -31,7 +31,7 @@ describe('filesSlice', () => {
       loading: false,
       error: null
     })
-    expect(['full', 'baseline']).toContain(store.getState().files.viewMode)
+    expect(['dashboard', 'files']).toContain(store.getState().files.activeTab)
   })
 
   it('setFilter / clearFilter update filter', () => {

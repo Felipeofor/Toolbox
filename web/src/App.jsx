@@ -1,9 +1,8 @@
 import React from 'react'
 import { Container } from 'react-bootstrap'
 
-import FilesView from './components/FilesView.jsx'
+import MainTabs from './components/MainTabs.jsx'
 import StatusPill from './components/StatusPill.jsx'
-import ViewModeSwitch from './components/ViewModeSwitch.jsx'
 
 export default function App () {
   return (
@@ -11,15 +10,10 @@ export default function App () {
       <header className='app-header'>
         <Container className='d-flex align-items-center justify-content-between gap-3 flex-wrap'>
           <h1 className='m-0'>React Test App</h1>
-          <div className='d-flex align-items-center gap-3'>
-            <ViewModeSwitch />
-            <StatusPill />
-          </div>
+          <StatusPill />
         </Container>
       </header>
-      <Container className='py-4'>
-        <FilesView />
-      </Container>
+      <MainTabs />
     </>
   )
 }
