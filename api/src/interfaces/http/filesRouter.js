@@ -29,6 +29,15 @@ function buildFilesRouter ({ useCases }) {
     }
   })
 
+  router.get('/stats', async (_req, res, next) => {
+    try {
+      const result = await useCases.getFilesStats()
+      return res.status(200).type('application/json; charset=utf-8').json(result)
+    } catch (err) {
+      return next(err)
+    }
+  })
+
   return router
 }
 

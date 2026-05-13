@@ -76,6 +76,18 @@ paths:
                 $ref: '#/components/schemas/FileList'
         '502':
           $ref: '#/components/responses/Upstream'
+  /files/stats:
+    get:
+      summary: Parse quality stats per file plus global summary
+      responses:
+        '200':
+          description: Quality stats
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FilesStats'
+        '502':
+          $ref: '#/components/responses/Upstream'
   /metrics:
     get:
       summary: Prometheus metrics
@@ -127,6 +139,53 @@ components:
           type: array
           items:
             type: string
+    FileQuality:
+      type: object
+      required: [file, valid, discarded, considered, successRate, status]
+      properties:
+        file:
+          type: string
+        valid:
+          type: integer
+        discarded:
+          type: integer
+        considered:
+          type: integer
+        successRate:
+          type: number
+          minimum: 0
+          maximum: 1
+        status:
+          type: string
+          enum: [ok, download_failed]
+    FilesStats:
+      type: object
+      required: [summary, perFile]
+      properties:
+        summary:
+          type: object
+          required:
+            - filesListed
+            - filesWithData
+            - filesEmpty
+            - filesFailed
+            - linesValid
+            - linesDiscarded
+            - linesConsidered
+            - successRate
+          properties:
+            filesListed:    { type: integer }
+            filesWithData:  { type: integer }
+            filesEmpty:     { type: integer }
+            filesFailed:    { type: integer }
+            linesValid:     { type: integer }
+            linesDiscarded: { type: integer }
+            linesConsidered:{ type: integer }
+            successRate:    { type: number, minimum: 0, maximum: 1 }
+        perFile:
+          type: array
+          items:
+            $ref: '#/components/schemas/FileQuality'
     AppError:
       type: object
       required: [error]

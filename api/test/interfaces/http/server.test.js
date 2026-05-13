@@ -27,6 +27,10 @@ function buildAppWith ({ files, perFile, downloadFails }) {
   const parseCsv = (_content, fileName) => (perFile[fileName] || []).map(
     (l) => new FileLine({ text: l.text, number: l.number, hex: new Hex(l.hex) })
   )
+  parseCsv.withStats = (_content, fileName) => {
+    const lines = parseCsv(_content, fileName)
+    return { lines, discarded: 0, considered: lines.length }
+  }
   const container = buildContainer({ logger: silentLogger, fileSource, parseCsv })
   return buildHttpServer(container)
 }
@@ -123,6 +127,20 @@ describe('interfaces/http/server', () => {
       const res = await request(app).get('/files/list')
       expect(res.status).to.equal(200)
       expect(res.body).to.deep.equal({ files: ['a.csv', 'b.csv'] })
+    })
+  })
+
+  describe('GET /files/stats', () => {
+    it('returns summary + perFile entries', async () => {
+      const app = buildAppWith({
+        files: ['a.csv'],
+        perFile: { 'a.csv': [{ text: 'x', number: 1, hex: HEX }] }
+      })
+      const res = await request(app).get('/files/stats')
+      expect(res.status).to.equal(200)
+      expect(res.body.summary).to.have.property('filesListed')
+      expect(res.body.summary).to.have.property('successRate')
+      expect(res.body.perFile).to.be.an('array')
     })
   })
 

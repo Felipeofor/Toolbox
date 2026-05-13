@@ -214,6 +214,7 @@ docker compose up --build
 | GET | `/files/data` | Listado parseado de todos los archivos |
 | GET | `/files/data?fileName=X` | Filtro por archivo |
 | GET | `/files/list` | Passthrough del listing upstream |
+| GET | `/files/stats` | Parse quality stats per-file + summary global |
 | GET | `/metrics` | Métricas Prometheus |
 | GET | `/docs` | Swagger UI interactivo |
 | GET | `/openapi.json` | Spec OpenAPI 3.0 |

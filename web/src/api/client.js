@@ -1,14 +1,15 @@
 const BASE_URL = process.env.API_BASE_URL || 'http://localhost:3000'
 
-async function fetchJson (path) {
+async function fetchJson (path, opts = {}) {
   const res = await fetch(`${BASE_URL}${path}`, {
-    headers: { Accept: 'application/json' }
+    headers: { Accept: 'application/json' },
+    ...opts
   })
   if (!res.ok) {
     let detail = ''
     try {
       const body = await res.json()
-      detail = body.error || ''
+      detail = body.error || body.message || ''
     } catch (_) { /* ignore */ }
     const err = new Error(detail || `request failed: ${res.status}`)
     err.status = res.status
@@ -24,4 +25,12 @@ export function getFilesData (fileName) {
 
 export function getFilesList () {
   return fetchJson('/files/list')
+}
+
+export function getFilesStats () {
+  return fetchJson('/files/stats')
+}
+
+export function getReady () {
+  return fetchJson('/ready')
 }

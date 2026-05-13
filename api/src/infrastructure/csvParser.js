@@ -23,30 +23,39 @@ function tryBuildLine (parts, expectedFile) {
 }
 
 function buildParser ({ logger }) {
-  return function parseCsv (content, expectedFileName) {
-    if (typeof content !== 'string' || content.length === 0) return []
+  function parseCsv (content, expectedFileName) {
+    return parseCsvWithStats(content, expectedFileName).lines
+  }
 
-    const lines = content.split(/\r?\n/)
-    if (lines.length === 0) return []
+  function parseCsvWithStats (content, expectedFileName) {
+    const stats = { lines: [], discarded: 0, considered: 0 }
+    if (typeof content !== 'string' || content.length === 0) return stats
+
+    const rawLines = content.split(/\r?\n/)
+    if (rawLines.length === 0) return stats
 
     let startIdx = 0
-    const firstCols = lines[0].split(',').map((s) => s.trim().toLowerCase())
+    const firstCols = rawLines[0].split(',').map((s) => s.trim().toLowerCase())
     if (isHeader(firstCols)) startIdx = 1
 
-    const result = []
-    for (let i = startIdx; i < lines.length; i++) {
-      const raw = lines[i]
+    for (let i = startIdx; i < rawLines.length; i++) {
+      const raw = rawLines[i]
       if (raw === undefined || raw === '') continue
+      stats.considered++
       const parts = raw.split(',')
       const line = tryBuildLine(parts, expectedFileName)
       if (line === null) {
+        stats.discarded++
         logger.debug({ file: expectedFileName, line: i + 1, raw }, 'discarding invalid CSV line')
         continue
       }
-      result.push(line)
+      stats.lines.push(line)
     }
-    return result
+    return stats
   }
+
+  parseCsv.withStats = parseCsvWithStats
+  return parseCsv
 }
 
 module.exports = { buildParser }

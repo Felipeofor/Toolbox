@@ -1,12 +1,15 @@
 import React, { useEffect, Suspense, lazy } from 'react'
-import { Alert, Spinner } from 'react-bootstrap'
+import { Alert, Button } from 'react-bootstrap'
 import { useDispatch, useSelector } from 'react-redux'
 
-import { fetchFilesData, fetchFilesList } from '../store/filesSlice.js'
+import { fetchFilesData, fetchFilesList, fetchFilesStats } from '../store/filesSlice.js'
 import { selectLoading, selectError } from '../store/selectors.js'
 import SearchBar from './SearchBar.jsx'
+import KpiCards from './KpiCards.jsx'
+import SkeletonTable from './SkeletonTable.jsx'
 
 const FilesTable = lazy(() => import('./FilesTable.jsx'))
+const DataQuality = lazy(() => import('./DataQuality.jsx'))
 
 export default function FilesView () {
   const dispatch = useDispatch()
@@ -16,30 +19,41 @@ export default function FilesView () {
   useEffect(() => {
     dispatch(fetchFilesData())
     dispatch(fetchFilesList())
+    dispatch(fetchFilesStats())
   }, [dispatch])
+
+  function retry () {
+    dispatch(fetchFilesData())
+    dispatch(fetchFilesStats())
+  }
 
   return (
     <section aria-labelledby='files-heading'>
       <h1 id='files-heading' className='visually-hidden'>Toolbox files</h1>
+
+      <KpiCards />
       <SearchBar />
 
-      {loading && (
-        <div className='d-flex align-items-center gap-2 mb-3' role='status' aria-live='polite'>
-          <Spinner animation='border' size='sm' aria-hidden='true' />
-          <span>Loading…</span>
-        </div>
-      )}
-
       {error && (
-        <Alert variant='danger' role='alert'>
-          <strong>Error {error.status || ''}:</strong> {error.message}
+        <Alert variant='danger' role='alert' className='d-flex align-items-center justify-content-between'>
+          <span>
+            <strong>Error {error.status || ''}:</strong> {error.message}
+          </span>
+          <Button size='sm' variant='outline-danger' onClick={retry}>Retry</Button>
         </Alert>
       )}
 
+      {loading && <SkeletonTable />}
+
       {!loading && !error && (
-        <Suspense fallback={<Spinner animation='border' size='sm' aria-label='Loading table' />}>
-          <FilesTable />
-        </Suspense>
+        <>
+          <Suspense fallback={<SkeletonTable rows={3} />}>
+            <DataQuality />
+          </Suspense>
+          <Suspense fallback={<SkeletonTable rows={6} />}>
+            <FilesTable />
+          </Suspense>
+        </>
       )}
     </section>
   )

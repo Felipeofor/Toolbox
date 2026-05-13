@@ -1,6 +1,6 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit'
 
-import { getFilesData, getFilesList } from '../api/client.js'
+import { getFilesData, getFilesList, getFilesStats } from '../api/client.js'
 
 export const fetchFilesData = createAsyncThunk(
   'files/fetchData',
@@ -25,10 +25,25 @@ export const fetchFilesList = createAsyncThunk(
   }
 )
 
+export const fetchFilesStats = createAsyncThunk(
+  'files/fetchStats',
+  async (_, { rejectWithValue }) => {
+    try {
+      return await getFilesStats()
+    } catch (err) {
+      return rejectWithValue({ message: err.message, status: err.status || 0 })
+    }
+  }
+)
+
 const initialState = {
   data: [],
   list: [],
   filter: '',
+  search: '',
+  sortBy: 'file',
+  sortDir: 'asc',
+  stats: null,
   loading: false,
   error: null
 }
@@ -42,6 +57,26 @@ const filesSlice = createSlice({
     },
     clearFilter (state) {
       state.filter = ''
+    },
+    setSearch (state, action) {
+      state.search = action.payload || ''
+    },
+    clearSearch (state) {
+      state.search = ''
+    },
+    setSort (state, action) {
+      const { sortBy, sortDir } = action.payload
+      state.sortBy = sortBy
+      state.sortDir = sortDir
+    },
+    toggleSort (state, action) {
+      const column = action.payload
+      if (state.sortBy === column) {
+        state.sortDir = state.sortDir === 'asc' ? 'desc' : 'asc'
+      } else {
+        state.sortBy = column
+        state.sortDir = 'asc'
+      }
     }
   },
   extraReducers: (builder) => {
@@ -62,8 +97,19 @@ const filesSlice = createSlice({
       .addCase(fetchFilesList.fulfilled, (state, action) => {
         state.list = action.payload
       })
+      .addCase(fetchFilesStats.fulfilled, (state, action) => {
+        state.stats = action.payload
+      })
   }
 })
 
-export const { setFilter, clearFilter } = filesSlice.actions
+export const {
+  setFilter,
+  clearFilter,
+  setSearch,
+  clearSearch,
+  setSort,
+  toggleSort
+} = filesSlice.actions
+
 export default filesSlice.reducer

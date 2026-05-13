@@ -24,6 +24,10 @@ describe('filesSlice', () => {
       data: [],
       list: [],
       filter: '',
+      search: '',
+      sortBy: 'file',
+      sortDir: 'asc',
+      stats: null,
       loading: false,
       error: null
     })

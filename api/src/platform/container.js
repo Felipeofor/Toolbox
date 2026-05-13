@@ -8,6 +8,7 @@ const { buildParser } = require('../infrastructure/csvParser')
 const { buildGetAllFilesData } = require('../application/files/getAllFilesData')
 const { buildGetFileData } = require('../application/files/getFileData')
 const { buildListFiles } = require('../application/files/listFiles')
+const { buildGetFilesStats } = require('../application/files/getFilesStats')
 
 /**
  * Composition root.
@@ -29,7 +30,13 @@ function buildContainer (overrides = {}) {
       concurrency: config.externalApi.downloadConcurrency
     }),
     getFileData: buildGetFileData({ fileSource, parseCsv, logger }),
-    listFiles: buildListFiles({ fileSource })
+    listFiles: buildListFiles({ fileSource }),
+    getFilesStats: buildGetFilesStats({
+      fileSource,
+      parseCsv,
+      logger,
+      concurrency: config.externalApi.downloadConcurrency
+    })
   }
 
   return { config, logger, metrics, fileSource, parseCsv, useCases }
