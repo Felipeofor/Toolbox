@@ -134,7 +134,7 @@ Solución al challenge técnico de TBX/Toolbox. Monorepo con:
 | Config | Archivo `config/default.json` + `config/test.json`; cero env vars de SO | Lo exige la consigna. |
 | Observabilidad | `pino` JSON con timestamp ISO + métricas Prometheus (`/metrics`) | Operación OTT vive en logs/métricas. |
 | Healthchecks | `/health` (liveness — siempre 200) + `/ready` (verifica upstream) | Kubernetes-friendly, Docker compose usa `/health`. |
-| Contrato | OpenAPI 3.0 en `openapi/openapi.yaml`, Swagger UI en `/docs`, JSON en `/openapi.json` | Lead-level: contrato versionado. |
+| Contrato | OpenAPI 3.0 en `openapi/openapi.yaml`, Swagger UI en `/docs`, JSON en `/openapi.json` | Contrato versionado y documentado. |
 | Inyección | Composition root `platform/container.js`; cada use case se construye via factory | Tests no necesitan monkey-patching. |
 | Tests | Mocha + Chai + nock + supertest; **gate de coverage** vía nyc (85/75/85/85) | Calidad medible. |
 | Lint | StandardJS | Suma del checklist + consistencia. |
@@ -317,7 +317,7 @@ Todas las respuestas JSON con `Content-Type: application/json; charset=utf-8`.
 
 El header rojo y el título "React Test App" matchean el wireframe. SearchBar/filter es agregado opcional (entra como suma).
 
-### Resiliencia y observabilidad (nivel Team Lead)
+### Resiliencia y observabilidad
 
 - **API versioning:** `/v1/files/*` además del legacy `/files/*` (ver ADR-0005).
 - **Config validation:** JSON Schema con Ajv (`additionalProperties: false`) al boot — falla rápido (ADR-0003).
@@ -349,7 +349,7 @@ El header rojo y el título "React Test App" matchean el wireframe. SearchBar/fi
   - Correlation `X-Request-Id` echo.
   - Path traversal rechazado (400 validation_error).
 
-### Más allá de la consigna (nivel Senior / Team Lead)
+### Mejoras adicionales
 
 - [x] Arquitectura hexagonal con DI explícita
 - [x] Value Objects de dominio (Hex, FileName, FileLine, FileEntry)

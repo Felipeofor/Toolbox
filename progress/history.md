@@ -173,7 +173,7 @@
 - Repo público: https://github.com/Felipeofor/Toolbox
 - Pendiente `MANUAL`: enviar URL al reclutador.
 
-## 2026-05-13 — T20 Upgrade a arquitectura Sr/Team Lead
+## 2026-05-13 — T20 Ajustes de arquitectura y documentación
 
 ### Refactor API → Hexagonal
 

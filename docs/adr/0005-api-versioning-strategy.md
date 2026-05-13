@@ -6,7 +6,7 @@
 
 ## Context
 
-The consigna defines `GET /files/data` as the canonical endpoint. Once we ship to consumers, any breaking change to that path is a public-contract break. Lead-level practice is to plan for evolution from day one.
+The consigna defines `GET /files/data` as the canonical endpoint. Once we ship to consumers, any breaking change to that path is a public-contract break, so the API should have a simple evolution path from the start.
 
 ## Decision
 

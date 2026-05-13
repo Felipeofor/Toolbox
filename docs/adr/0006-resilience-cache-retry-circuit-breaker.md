@@ -39,4 +39,4 @@ Negative:
 
 - DIY retry/breaker: rejected; the libraries have been battle-tested and are tiny.
 - Redis-backed cache: overkill for this single-process service.
-- Skipping resilience because the consigna doesn't require it: rejected; this is exactly the kind of plumbing a Team Lead is expected to add.
+- Skipping resilience because the consigna doesn't require it: rejected; these safeguards keep the API responsive when the upstream is slow or flaky.
