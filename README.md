@@ -5,7 +5,12 @@ Solución al challenge técnico de TBX/Toolbox. Monorepo con:
 - **`api/`** — REST API en **Node 14 + Express**, organizada en arquitectura **hexagonal (Ports & Adapters)** con DI explícita.
 - **`web/`** — Frontend en **React 18 + React Bootstrap (Webpack 5)** con **Redux Toolkit**, selectores memoizados, lazy loading y error boundary.
 - **`docker-compose.yml`** — orquesta ambos servicios.
-- **`.github/workflows/ci.yml`** — pipeline CI con lint, tests, coverage gate, build y validación de imágenes Docker.
+- **`.github/workflows/ci.yml`** — pipeline CI con lint, tests, coverage gate, build, validación de imágenes Docker y **Playwright E2E**.
+- **`.github/workflows/codeql.yml`** — análisis estático de seguridad (GitHub CodeQL) en push, PR y schedule semanal.
+- **`.github/dependabot.yml`** — actualizaciones automáticas de deps (npm api, web, root, github-actions y Docker).
+- **`docs/adr/`** — 7 Architecture Decision Records explicando hexagonal, resiliencia, versioning, correlation IDs, etc.
+- **`e2e/`** — Playwright suite (Chromium) que valida dashboard, búsqueda client-side y contrato API.
+- **`.husky/`** — pre-commit (lint-staged) + commit-msg (commitlint con conventional commits).
 
 ---
 
@@ -215,6 +220,7 @@ docker compose up --build
 | GET | `/files/data?fileName=X` | Filtro por archivo |
 | GET | `/files/list` | Passthrough del listing upstream |
 | GET | `/files/stats` | Parse quality stats per-file + summary global |
+| GET | `/v1/files/data` · `/v1/files/list` · `/v1/files/stats` | Alias versionados (preferidos para nuevos consumidores) |
 | GET | `/metrics` | Métricas Prometheus |
 | GET | `/docs` | Swagger UI interactivo |
 | GET | `/openapi.json` | Spec OpenAPI 3.0 |
@@ -310,6 +316,38 @@ Todas las respuestas JSON con `Content-Type: application/json; charset=utf-8`.
 - `consigna.pdf` — consigna original en PDF.
 
 El header rojo y el título "React Test App" matchean el wireframe. SearchBar/filter es agregado opcional (entra como suma).
+
+### Resiliencia y observabilidad (nivel Team Lead)
+
+- **API versioning:** `/v1/files/*` además del legacy `/files/*` (ver ADR-0005).
+- **Config validation:** JSON Schema con Ajv (`additionalProperties: false`) al boot — falla rápido (ADR-0003).
+- **Correlation IDs:** `X-Request-Id` echo + propagación a upstream vía `AsyncLocalStorage` (ADR-0007).
+- **Cache TTL** sobre `listFiles()` (default 30s, configurable, OFF en tests).
+- **Retry con backoff:** axios-retry sobre 5xx + errores de red.
+- **Circuit breaker:** opossum sobre cada operación upstream con eventos logueados.
+- **Graceful shutdown:** SIGTERM/SIGINT cierran HTTP server + breakers + cache con timeout (ADR-0006).
+- **`/health` (liveness) vs `/ready` (readiness)** — Docker compose usa `/health`, Kubernetes-friendly.
+- **Métricas Prometheus** en `/metrics` (default + http_request_duration + http_requests_total).
+- **OpenAPI 3.0** en `/openapi.json` + Swagger UI en `/docs`.
+
+### Governance y supply chain
+
+- **ADRs** (`docs/adr/`): 7 decisiones documentadas estilo Michael Nygard.
+- **CodeQL** workflow para análisis estático de seguridad.
+- **Dependabot** con grouping de minor/patch y cobertura de npm + Docker + Actions.
+- **npm audit** en CI (level high).
+- **Husky + lint-staged** pre-commit (corre StandardJS en archivos cambiados).
+- **commitlint** + conventional commits (commit-msg hook).
+
+### Tests E2E
+
+- **Playwright** (`e2e/`) levanta API + Web reales y valida:
+  - Dashboard renderiza KPIs + Data Quality + CTA.
+  - Tab Files muestra tabla + buscador client-side filtra en vivo.
+  - Sortable headers cambian `aria-sort` correctamente.
+  - Contrato API (`/health`, `/v1/files/list`, `/v1/files/data`, `/v1/files/stats`).
+  - Correlation `X-Request-Id` echo.
+  - Path traversal rechazado (400 validation_error).
 
 ### Más allá de la consigna (nivel Senior / Team Lead)
 

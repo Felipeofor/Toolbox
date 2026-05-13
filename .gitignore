@@ -18,3 +18,7 @@ Thumbs.db
 *.key
 
 .claude/settings.local.json
+
+# root tooling (installed by root `npm install` on contributors' machines)
+node_modules/
+.husky/_

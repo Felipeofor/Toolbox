@@ -7,6 +7,29 @@ on:
     branches: [main]
 
 jobs:
+  audit:
+    name: Audit · npm + commits
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: API · audit (high)
+        working-directory: api
+        run: npm audit --omit=dev --audit-level=high || true
+      - name: Web · audit (high)
+        working-directory: web
+        run: npm audit --omit=dev --audit-level=high || true
+      - name: Commitlint last commit
+        run: |
+          npm install -g @commitlint/{cli,config-conventional}
+          echo '{ "extends": ["@commitlint/config-conventional"] }' > commitlint.config.json
+          git log -1 --pretty=%B | npx commitlint --config commitlint.config.json || true
+
   api:
     name: API · Node 14
     runs-on: ubuntu-latest
@@ -85,3 +108,66 @@ jobs:
         run: docker build -t toolbox-api:ci ./api
       - name: Build Web image
         run: docker build --build-arg API_BASE_URL=http://localhost:3000 -t toolbox-web:ci ./web
+
+  e2e:
+    name: E2E · Playwright
+    runs-on: ubuntu-latest
+    needs: [api, web]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install API
+        working-directory: api
+        run: npm ci
+
+      - name: Start API in background
+        working-directory: api
+        run: |
+          nohup npm start > api.log 2>&1 &
+          for i in {1..30}; do
+            if curl -sf http://localhost:3000/health > /dev/null; then exit 0; fi
+            sleep 1
+          done
+          echo 'API failed to start'; cat api.log; exit 1
+
+      - name: Install Web
+        working-directory: web
+        run: npm ci
+
+      - name: Start Web (webpack-dev-server) in background
+        working-directory: web
+        env:
+          API_BASE_URL: http://localhost:3000
+        run: |
+          nohup npm start > web.log 2>&1 &
+          for i in {1..60}; do
+            if curl -sf http://localhost:8080/ > /dev/null; then exit 0; fi
+            sleep 1
+          done
+          echo 'Web failed to start'; cat web.log; exit 1
+
+      - name: Install Playwright deps
+        working-directory: e2e
+        run: |
+          npm install
+          npx playwright install --with-deps chromium
+
+      - name: Run E2E
+        working-directory: e2e
+        env:
+          WEB_URL: http://localhost:8080
+          API_BASE_URL: http://localhost:3000
+        run: npm test
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: e2e/playwright-report
+          if-no-files-found: ignore

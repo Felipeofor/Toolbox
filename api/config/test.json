@@ -5,13 +5,24 @@
     "rateLimit": {
       "windowMs": 60000,
       "max": 100000
-    }
+    },
+    "shutdownTimeoutMs": 100
   },
   "externalApi": {
     "baseUrl": "https://echo-serv.tbxnet.com",
     "token": "aSuperSecretKey",
     "timeoutMs": 1000,
-    "downloadConcurrency": 5
+    "downloadConcurrency": 5,
+    "cacheTtlMs": 0,
+    "retry": {
+      "retries": 0,
+      "baseDelayMs": 0
+    },
+    "circuitBreaker": {
+      "timeoutMs": 5000,
+      "errorThresholdPercentage": 99,
+      "resetTimeoutMs": 100
+    }
   },
   "log": {
     "level": "silent"

@@ -1,0 +1,29 @@
+{
+  "name": "toolbox-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Root tooling for the Toolbox challenge monorepo (api + web).",
+  "scripts": {
+    "prepare": "husky install",
+    "lint:api": "npm --prefix api run lint",
+    "test:api": "npm --prefix api test",
+    "test:web": "npm --prefix web test -- --ci"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^17.7.1",
+    "@commitlint/config-conventional": "^17.7.0",
+    "husky": "^8.0.3",
+    "lint-staged": "^13.3.0"
+  },
+  "lint-staged": {
+    "api/**/*.js": [
+      "npm --prefix api run lint --"
+    ],
+    "web/**/*.{js,jsx}": []
+  },
+  "commitlint": {
+    "extends": [
+      "@commitlint/config-conventional"
+    ]
+  }
+}

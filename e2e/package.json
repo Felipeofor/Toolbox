@@ -1,0 +1,13 @@
+{
+  "name": "toolbox-e2e",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Playwright end-to-end tests against the live API + Web stack.",
+  "scripts": {
+    "test": "playwright test",
+    "report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.40.0"
+  }
+}

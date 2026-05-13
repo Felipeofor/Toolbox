@@ -183,4 +183,46 @@ describe('interfaces/http/server', () => {
       expect(res.body.error).to.equal('not_found')
     })
   })
+
+  describe('versioning', () => {
+    it('serves the same payload under /v1/files/data', async () => {
+      const app = buildAppWith({
+        files: ['a.csv'],
+        perFile: { 'a.csv': [{ text: 'x', number: 1, hex: HEX }] }
+      })
+      const v1 = await request(app).get('/v1/files/data')
+      const legacy = await request(app).get('/files/data')
+      expect(v1.status).to.equal(200)
+      expect(legacy.status).to.equal(200)
+      expect(v1.body).to.deep.equal(legacy.body)
+    })
+
+    it('serves /v1/files/list and /v1/files/stats', async () => {
+      const app = buildAppWith({
+        files: ['a.csv'],
+        perFile: { 'a.csv': [{ text: 'x', number: 1, hex: HEX }] }
+      })
+      const list = await request(app).get('/v1/files/list')
+      const stats = await request(app).get('/v1/files/stats')
+      expect(list.status).to.equal(200)
+      expect(stats.status).to.equal(200)
+      expect(list.body).to.have.property('files')
+      expect(stats.body).to.have.property('summary')
+    })
+  })
+
+  describe('correlation IDs', () => {
+    it('returns X-Request-Id with a generated value when none is provided', async () => {
+      const app = buildAppWith({ files: [], perFile: {} })
+      const res = await request(app).get('/health')
+      expect(res.headers['x-request-id']).to.match(/^[0-9a-f-]{16,}$/)
+    })
+
+    it('echoes a client-provided X-Request-Id', async () => {
+      const app = buildAppWith({ files: [], perFile: {} })
+      const provided = 'trace-abc-123'
+      const res = await request(app).get('/health').set('X-Request-Id', provided)
+      expect(res.headers['x-request-id']).to.equal(provided)
+    })
+  })
 })

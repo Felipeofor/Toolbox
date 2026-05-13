@@ -5,6 +5,11 @@ info:
   description: |
     REST API that consumes an upstream secret file source, parses the
     delivered CSVs and exposes a normalized JSON view per file.
+
+    Routes are exposed under two prefixes:
+      - `/files/*` (legacy, kept to honor the original challenge contract).
+      - `/v1/files/*` (preferred, versioned alias).
+    Both serve identical responses. New consumers should target `/v1`.
 servers:
   - url: http://localhost:3000
     description: Local development
@@ -35,6 +40,32 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HealthStatus'
+  /v1/files/data:
+    get:
+      summary: (preferred) Fetch and reformat all files (or one if filtered)
+      description: Versioned alias of `/files/data`.
+      parameters:
+        - in: query
+          name: fileName
+          required: false
+          schema:
+            type: string
+            pattern: '^[A-Za-z0-9._-]+$'
+            maxLength: 255
+      responses:
+        '200':
+          description: Parsed file entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FileEntry'
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '502': { $ref: '#/components/responses/Upstream' }
+        '503': { $ref: '#/components/responses/Upstream' }
   /files/data:
     get:
       summary: Fetch and reformat all files (or one if filtered)

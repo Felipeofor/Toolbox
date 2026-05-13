@@ -10,6 +10,7 @@ const yaml = require('js-yaml')
 
 const { buildSecurityMiddleware } = require('./middleware/security')
 const { buildErrorHandler, notFoundHandler } = require('./middleware/errorHandler')
+const { buildRequestIdMiddleware } = require('./middleware/requestId')
 const { buildFilesRouter } = require('./filesRouter')
 const { buildHealthRouter } = require('./healthRouter')
 
@@ -22,15 +23,16 @@ function buildHttpServer ({ config, logger, metrics, fileSource, useCases }) {
   const app = express()
 
   app.disable('x-powered-by')
-
-  // Trust proxy if needed (rate limit + X-Forwarded-For). Conservative default.
   app.set('trust proxy', 1)
 
+  app.use(buildRequestIdMiddleware())
   buildSecurityMiddleware({ config }).forEach((mw) => app.use(mw))
-  app.use(pinoHttp({ logger }))
+  app.use(pinoHttp({
+    logger,
+    customProps: (req) => ({ requestId: req.id })
+  }))
   app.use(metrics.middleware)
 
-  // Readiness checks the upstream is reachable.
   const readinessProbe = async () => {
     try {
       await fileSource.listFiles()
@@ -41,7 +43,12 @@ function buildHttpServer ({ config, logger, metrics, fileSource, useCases }) {
   }
 
   app.use(buildHealthRouter({ readinessProbe }))
-  app.use('/files', buildFilesRouter({ useCases }))
+
+  // API versioning: legacy /files (matches the original challenge contract)
+  // is mounted alongside /v1/files (current versioned alias).
+  const filesRouter = buildFilesRouter({ useCases })
+  app.use('/files', filesRouter)
+  app.use('/v1/files', filesRouter)
 
   app.get('/metrics', async (_req, res) => {
     res.set('Content-Type', metrics.registry.contentType)
