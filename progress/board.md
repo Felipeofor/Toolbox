@@ -14,9 +14,6 @@
 
 ### API (Node 14 + Express)
 
-- **T03 — Setup base API**
-  Instalar Express, cors, pino, config. Entry `src/index.js`. Config `config/default.json` con `externalApi.baseUrl` y `externalApi.token`. Script `npm start`. Puerto 3000. Endpoint `/health` mínimo.
-  **Done when:** `npm start` arranca en :3000; `curl /health` devuelve `{status:"ok"}`.
 
 - **T04 — Cliente API externa**
   `src/services/externalApi.js`: funciones `listFiles()` y `downloadFile(name)` usando axios con baseURL y header `Authorization: Bearer <token>` desde config. Timeout 10s. Manejo de errores: lanza error tipado con código HTTP.
@@ -90,10 +87,7 @@
 
 ## IN PROGRESS
 
-- **T02 — Inicializar repo git**
-  `git init`, primer commit con scaffold, agregar remote `https://github.com/Felipeofor/Toolbox.git`, push a `main`.
-  **Done when:** `git log` muestra commit inicial; remoto pusheado; repo accesible público.
-  `owner: implementer` · `started: 2026-05-13`
+*(vacío)*
 
 ---
 
@@ -101,3 +95,9 @@
 
 - **T01 — Scaffold monorepo** · `completed by: implementer` · `2026-05-13`
   Estructura `api/` (src, test, config) y `web/` (src, public) creadas. `package.json` válidos con engines, `.nvmrc` (14 y 16), `.gitignore` raíz + por subproyecto, README raíz + por subproyecto.
+
+- **T02 — Inicializar repo git** · `completed by: implementer` · `2026-05-13`
+  `git init -b main`, config local `user.name=Felipe Ramos`, `user.email=felipeofor@gmail.com`. Commit inicial `b7231e4` (16 files). Remote `origin → https://github.com/Felipeofor/Toolbox.git`, push a `main` con tracking.
+
+- **T03 — Setup base API** · `completed by: implementer` · `2026-05-13`
+  Deps: express, cors, pino, pino-http, config, axios. DevDeps: mocha, chai, nock, supertest, standard. `config/default.json` y `config/test.json` con server/externalApi/log. `src/logger.js` (pino), `src/app.js` (cors + pino-http + /health + router files + 404/500 handlers), `src/index.js` entry. Smoke test: `/health` → 200 `{"status":"ok"}` con `application/json; charset=utf-8`.

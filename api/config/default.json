@@ -1,0 +1,15 @@
+{
+  "server": {
+    "port": 3000,
+    "corsOrigin": "*"
+  },
+  "externalApi": {
+    "baseUrl": "https://echo-serv.tbxnet.com",
+    "token": "aSuperSecretKey",
+    "timeoutMs": 10000,
+    "downloadConcurrency": 5
+  },
+  "log": {
+    "level": "info"
+  }
+}

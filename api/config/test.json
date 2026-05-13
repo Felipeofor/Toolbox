@@ -1,0 +1,14 @@
+{
+  "server": {
+    "port": 0
+  },
+  "externalApi": {
+    "baseUrl": "https://echo-serv.tbxnet.com",
+    "token": "aSuperSecretKey",
+    "timeoutMs": 1000,
+    "downloadConcurrency": 5
+  },
+  "log": {
+    "level": "silent"
+  }
+}
